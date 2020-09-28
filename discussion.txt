@@ -1,0 +1,79 @@
+
+Lassi Kortela <lassi@lassi.io>
+Jul 7, 2020, 8:10 AM
+to John Cowan <cowan@ccil.org>
+
+I'd like to write a SRFI for a substring search-and-replace library.
+Similar in spirit to SRFI 115 (Scheme Regular Expressions) but the
+search keys are substrings instead of regexps. SRFI 13 has a few
+substring procedures but inadequate for daily work.
+
+Tentative API:
+
+(define (substring-index substr str [start end])) -> index or #f
+(define (substring-index-right substr str [start end])) -> index or #f
+(define (substring-index-fold kons knil substr str)) -> object
+(define (substring-index-fold-right kons knil substr str)) -> object
+(define (substring-split substr str)) -> list of strings
+(define (substring-replace substr str new)) -> string
+(define (substring-replace-right substr str new)) -> string
+(define (substring-replace-prefix substr str new)) -> string
+(define (substring-replace-suffix substr str new)) -> string
+(define (substring-prefix? substr str)) -> boolean
+(define (substring-suffix? substr str)) -> boolean
+
+Plus case-insentitive `-ci` variants of all of them.
+
+The order of the substr and str arguments is up for debate. SRFI 115
+puts the regexp argument before the string it operates on. I've kept
+that order above. Since the procedures are named `substring-*`, it's
+natural for the substring to be the first argument. SRFI 13 has the
+opposite order, with the big string as the first argument and the
+string/char/charset/pred key as the second. That's natural for that SRFI
+since its procedures are named ? `string-*` so it makes sense for the
+big string to come first.
+
+substring-prefix? and substring-suffix? are pretty straightforward
+copies of SRFI 13 string-prefix? and string-suffix?. SRFI 13 uses an
+argument order here that is inconsistent with itself, but is consistent
+with the above-proposed argument order for the substring SRFI.
+
+SRFI 13 string-contains is substring-index above. The latter name is
+more obvious, and is more consistent with the rest of SRFI 13 since SRFI
+13 has `string-index` and `string-index-right` to look for characters in
+strings!
+
+Opinions?
+
+
+Lassi Kortela <lassi@lassi.io>
+Jul 7, 2020, 8:29 AM
+to John Cowan <cowan@ccil.org>
+
+> (define (substring-replace substr str new)) -> string
+> (define (substring-replace-right substr str new)) -> string
+> (define (substring-replace-prefix substr str new)) -> string
+> (define (substring-replace-suffix substr str new)) -> string
+
+Could also have:
+
+(define (substring-delete substr str)) -> string
+(define (substring-delete-prefix substr str)) -> string
+(define (substring-delete-suffix substr str)) -> string
+
+But those are equivalent to replace with "".
+
+`replace` and `replace-right` are meant to replace all occurrences of
+the substring; however, if the `new` argument is a closure, it's called
+for each occurrence like this:
+
+(lambda (substring-start-index) ...) -> string or #f
+
+If it returns a string, that's used as the replacement for this
+occurrence. If it returns #f, the occurrence is not replaced.
+
+It's due to the closure support that there are separate `replace` and
+`replace-right` procedures. The closure can keep track of how many
+replacements have been done so far and only replace the first or last N
+occurrences.
+
